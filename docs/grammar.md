@@ -102,7 +102,6 @@ $ python -m usagi 예제.usagi
 하아?
 
 $ python -m usagi --unusagi 예제.usagi
-하아?
 [3번째 줄] 알 수 없는 단어: 우라루
 ```
 
