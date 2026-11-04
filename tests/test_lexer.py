@@ -14,14 +14,14 @@ from usagi.keywords import (
     PRINT_CHAR,
     PRINT_NO_NEWLINE,
 )
-from usagi.lexer import read_source, tokenize
+from usagi.lexer import normalize, read_source, tokenize
 
 def kinds(tokens):
     return [token.kind for token in tokens]
 
 # 키워드
 def test_키워드():
-    tokens = tokenize("미야아아\n야하\n야핫\n루루루루루\n후으-응")
+    tokens = tokenize("미야아아\n야하\n야핫\n루루루루루\n야하핫")
     assert kinds(tokens) == [
         MAIN, NEWLINE,
         PRINT, NEWLINE,
@@ -54,7 +54,7 @@ def test_곱하기_정수토큰():
 
 # 줄, 공백, 주석
 def test_빈줄_주석_버리기():
-    source = "미야아아\n\n푸루야우라우라 설명 \n야하 우라\n후으-응"
+    source = "미야아아\n\n푸루야우라우라 설명 \n야하 우라\n야하핫"
     tokens = tokenize(source)
     assert kinds(tokens) == [MAIN, NEWLINE, PRINT, NUMBER, NEWLINE, BLOCK_END, NEWLINE]
     assert [t.line for t in tokens if t.kind == NEWLINE] == [1, 4, 5]
@@ -64,8 +64,20 @@ def test_들여쓰기_탭_공백여러칸():
     assert kinds(tokens) == [PRINT, NUMBER, NUMBER, NEWLINE]
 
 # 정규화
-def test_하이픈():
-    assert tokenize("후으ー응")[0].kind == BLOCK_END
+@pytest.mark.parametrize(
+    "before, after",
+    [
+        ("우ー라", "우-라"),   # 일본어 장음 부호
+        ("우－라", "우-라"),   # 전각 하이픈
+        ("우〜라", "우~라"),   # 물결 대시
+        ("우～라", "우~라"),   # 전각 물결
+        ("우∼라", "우~라"),   # 수학 물결
+        ("하？", "하?"),       # 전각 물음표
+    ],
+)
+
+def test_비슷한기호_통일(before, after):
+    assert normalize(before) == after
 
 def test_자모분리():
     source = unicodedata.normalize("NFD", "푸루야우라우라 맥\n 야하 우라라")
@@ -92,7 +104,7 @@ def test_알수없는단어(word):
 # 파일 읽기
 def test_BOM_파일(tmp_path):
     path = tmp_path / "bom.usagi"
-    path.write_text("미야아아\n후으-응\n", encoding="utf-8-sig")
+    path.write_text("미야아아\n야하핫\n", encoding="utf-8-sig")
     assert kinds(tokenize(read_source(path)))[0] == MAIN
 
 def test_없는_파일():

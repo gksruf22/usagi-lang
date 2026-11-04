@@ -10,11 +10,16 @@ PRINT_CHAR = "PRINT_CHAR" # 글자 출력
 NUMBER = "NUMBER" # 정수
 NEWLINE = "NEWLINE" # 줄끝(lexer가 줄마다 넣음)
 
-# 2. 키워드 표
+# 2. 키워드 철자
+
+MAIN_WORD = "미야아아"
+BLOCK_END_WORD = "야하핫"
+
+# 3. 키워드 표
 
 KEYWORDS = {
-    "미야아아": MAIN, 
-    "후으-응": BLOCK_END,
+    MAIN_WORD: MAIN,
+    BLOCK_END_WORD: BLOCK_END,
     "야하": PRINT,
     "야핫": PRINT_NO_NEWLINE,
     "루루루루루": PRINT_CHAR,
