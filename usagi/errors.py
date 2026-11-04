@@ -11,7 +11,7 @@ class UsagiError(Exception):
     line: 에러가 발생한 줄 번호
     """
     def __init__(self, message, line=None):
-        super().init__(message)
+        super().__init__(message)
         self.message = message
         self.line = line
 
