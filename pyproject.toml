@@ -1,0 +1,25 @@
+# usagi lang install
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+ 
+[project]
+name = "usagi-lang"
+version = "0.0.1"
+description = "치이카와 우사기의 감탄사(우사기어)로 코딩하는 한글 난해 프로그래밍 언어"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = []
+ 
+[project.optional-dependencies]
+# 개발할 때만 필요한 도구:  pip install -e ".[dev]"
+dev = ["pytest"]
+ 
+[project.scripts]
+# "usagi" 명령을 입력하면 usagi/cli.py의 main()을 실행한다.
+usagi = "usagi.cli:main"
+ 
+[tool.setuptools]
+packages = ["usagi"]
