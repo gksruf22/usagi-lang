@@ -10,7 +10,30 @@ class Number:
     line: int
 
 @dataclass
+class Variable:
+    index: int
+    line: int
+
+@dataclass
 class Multiply:
+    left: object
+    right: object
+    line: int
+
+@dataclass
+class Divide:
+    left: object
+    right: object
+    line: int
+
+@dataclass
+class Modulo:
+    left: object
+    right: object
+    line: int
+
+@dataclass
+class Add:
     left: object
     right: object
     line: int
@@ -30,6 +53,17 @@ class PrintNoNewline:
 @dataclass
 class PrintChar:
     expr: object
+    line: int
+
+@dataclass
+class Assign:
+    index: int
+    expr: object
+    line: int
+
+@dataclass
+class InputInt:
+    index: int
     line: int
 
 # 함수와 프로그램

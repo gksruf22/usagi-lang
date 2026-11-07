@@ -5,13 +5,19 @@ import pytest
 from usagi.errors import UsagiError
 from usagi.lexer import tokenize
 from usagi.nodes import (
+    Add,
+    Assign,
+    Divide,
     Function,
+    InputInt,
+    Modulo,
     Multiply,
     Number,
     Print,
     PrintChar,
     PrintNoNewline,
     Program,
+    Variable,
 )
 from usagi.parser import parse
 
@@ -64,6 +70,81 @@ def test_메인앞뒤_주석_빈줄():
     ],
 )
 def test_문법에러(source, line, message):
+    with pytest.raises(UsagiError) as info:
+        parse_source(source)
+    assert info.value.line == line
+    assert info.value.message == message
+
+
+# 2단계
+
+def first_expr(code):
+    return parse_source(f"미야아아\n야하 {code}\n야하핫").main.body[0].expr
+ 
+ 
+def test_대입문():
+    body = parse_source("미야아아\n푸루 흐응 우라라\n야하핫").main.body
+    assert body == [Assign(1, Number(2, 2), 2)]
+ 
+ 
+def test_입력문():
+    body = parse_source("미야아아\n쥬르리 푸루루\n야하핫").main.body
+    assert body == [InputInt(2, 2)]
+ 
+ 
+def test_변수_읽기():
+    assert first_expr("푸루루") == Variable(2, 2)
+ 
+ 
+def test_곱하기_먼저():
+    assert first_expr("우라 이야 우라라 우라라라") == Add(
+        Number(1, 2), Multiply(Number(2, 2), Number(3, 2), 2), 2
+    )
+ 
+ 
+def test_더하기는_왼쪽부터():
+    assert first_expr("우라 이야 우라라 이야 우라라라") == Add(
+        Add(Number(1, 2), Number(2, 2), 2), Number(3, 2), 2
+    )
+ 
+ 
+def test_곱하기_나누기_왼쪽부터():
+    assert first_expr("우라라라 우라라라라라우라라 이야 우라") == Add(
+        Divide(Multiply(Number(3, 2), Number(5, 2), 2), Number(2, 2), 2),
+        Number(1, 2),
+        2,
+    )
+ 
+ 
+def test_나머지():
+    assert first_expr("우라라라라라라라 핫 우라라라") == Modulo(Number(7, 2), Number(3, 2), 2)
+ 
+ 
+def test_빼기_음수_곱하고더하기():
+    assert first_expr("우라라라라라 이야 우루 우라라") == Add(
+        Number(5, 2), Multiply(Number(-1, 2), Number(2, 2), 2), 2
+    )
+ 
+ 
+@pytest.mark.parametrize(
+    "source, line, message",
+    [
+        ("미야아아\n푸루 흐응\n야하핫", 2, "넣을 값이 없음"),
+        ("미야아아\n푸루우라 흐응 우라\n야하핫", 2, "값을 넣을 곳은 변수 하나여야 함"),
+        ("미야아아\n푸루\n야하핫", 2, "문장을 시작할 수 없는 단어"),
+        ("미야아아\n푸루 우라\n야하핫", 2, "문장을 시작할 수 없는 단어"),
+        ("미야아아\n쥬르리\n야하핫", 2, "입력을 넣을 곳은 변수 하나여야 함"),
+        ("미야아아\n쥬르리 우라\n야하핫", 2, "입력을 넣을 곳은 변수 하나여야 함"),
+        ("미야아아\n쥬르리 푸루우라\n야하핫", 2, "입력을 넣을 곳은 변수 하나여야 함"),
+        ("미야아아\n쥬르리 푸루 푸루루\n야하핫", 2, "한 줄에 문장은 하나만 쓸 수 있음"),
+        ("미야아아\n야하 우라 이야\n야하핫", 2, "계산할 값이 없음"),
+        ("미야아아\n야하 우라 핫\n야하핫", 2, "계산할 값이 없음"),
+        ("미야아아\n야하 이야 우라\n야하핫", 2, "출력할 값이 없음"),
+        ("미야아아\n야하 우라 이야 핫 우라\n야하핫", 2, "계산할 값이 없음"),
+        ("미야아아\n흐응 우라\n야하핫", 2, "문장을 시작할 수 없는 단어"),
+    ],
+)
+def test_2단계_문법에러(source, line, message):
     with pytest.raises(UsagiError) as info:
         parse_source(source)
     assert info.value.line == line

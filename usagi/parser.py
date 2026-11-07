@@ -2,25 +2,39 @@
 
 from usagi.errors import UsagiError
 from usagi.keywords import (
+    ADD,
+    ASSIGN,
     BLOCK_END,
     BLOCK_END_WORD,
+    DIVIDE,
+    INPUT_INT,
     MAIN,
     MAIN_WORD,
+    MODULO,
     NEWLINE,
     NUMBER,
     PRINT,
     PRINT_CHAR,
     PRINT_NO_NEWLINE,
+    VARIABLE,
 )
 from usagi.nodes import (
+    Add,
+    Assign,
+    Divide,
     Function,
+    InputInt,
+    Modulo,
     Multiply,
     Number,
     Print,
     PrintChar,
     PrintNoNewline,
     Program,
+    Variable,
 )
+
+VALUE_KINDS = (NUMBER, VARIABLE)
 
 def parse(tokens):
     return Parser(tokens).parse_program()
@@ -38,6 +52,10 @@ class Parser:
             return self.tokens[self.pos]
         return None
 
+    def peek_kind(self): # 현재 토큰의 종류. 토큰이 없으면 None
+        token = self.peek()
+        return token.kind if token is not None else None
+
     def advance(self): # 토큰을 가져가고 위치를 한 칸 옮김
         token = self.peek()
         self.pos += 1
@@ -50,7 +68,7 @@ class Parser:
         return self.advance()
 
 
-    # 문법 규칙
+    # 문법 규칙: 프로그램, 블록
 
     def parse_program(self):
         """프로그램 = 메인블록"""
@@ -100,15 +118,22 @@ class Parser:
 
             statements.append(self.parse_statement())
 
+
+    # 문법 규칙: 문장
+
     def parse_statement(self):
         token = self.advance()
 
         if token.kind == PRINT:
-            node = Print(self.parse_expression(token), token.line)
+            node = Print(self.parse_expression(token, "출력할 값이 없음"), token.line)
         elif token.kind == PRINT_NO_NEWLINE:
-            node = PrintNoNewline(self.parse_expression(token), token.line)
+            node = PrintNoNewline(self.parse_expression(token, "출력할 값이 없음"), token.line)
         elif token.kind == PRINT_CHAR:
-            node = PrintChar(self.parse_expression(token), token.line)
+            node = PrintChar(self.parse_expression(token, "출력할 값이 없음"), token.line)
+        elif token.kind == VARIABLE:
+            node = self.parse_assign(token)
+        elif token.kind == INPUT_INT:
+            node = self.parse_input_int(token)
         else:
             raise UsagiError("문장을 시작할 수 없는 단어", token.line)
 
@@ -116,17 +141,76 @@ class Parser:
         self.expect(NEWLINE, "한 줄에 문장은 하나만 쓸 수 있음", token.line)
         return node
 
-    def parse_expression(self, owner):
-        token = self.peek()
-        if token is None or token.kind != NUMBER:
-            raise UsagiError("출력할 값이 없음", owner.line)
+    def parse_assign(self, target):
+        next_kind = self.peek_kind()
+
+        # 왼쪽 변수 하나가 아닌 경우
+        if next_kind == DIVIDE:
+            raise UsagiError("값을 넣을 곳은 변수 하나여야 함", target.line)
+
+        # 변수로 시작했는데 흐응이 없는 경우
+        if next_kind != ASSIGN:
+            raise UsagiError("문장을 시작할 수 없는 단어", target.line)
 
         self.advance()
-        node = Number(token.value, token.line)
+        expr = self.parse_expression(target, "넣을 값이 없음")
+        return Assign(target.value, expr, target.line)
 
-        # 다음 토큰도 정수면 곱셈
-        while self.peek() is not None and self.peek().kind == NUMBER:
-            right = self.advance()
-            node = Multiply(node, Number(right.value, right.line), right.line)
+    def parse_input_int(self, keyword):
+        message = "입력을 넣을 곳은 변수 하나여야 함"
+        target = self.expect(VARIABLE, message, keyword.line)
+
+        # 변수 뒤에 나누기가 붙은 경우
+        if self.peek_kind() == DIVIDE:
+            raise UsagiError(message, keyword.line)
+
+        return InputInt(target.value, keyword.line)
+
+
+    # 문법 규칙: 식(계산 순서: 항을 먼저 묶고 더하기는 나중)
+    def parse_expression(self, owner, missing_message):
+        node = self.parse_term(owner, missing_message)
+
+        # 이야가 나오면 오른쪽 항을 읽어 더하기로 묶는다. 왼쪽부터 차례로 묶인다.
+        while self.peek_kind() == ADD:
+            operator = self.advance()
+            right = self.parse_term(operator, "계산할 값이 없음")
+            node = Add(node, right, operator.line)
 
         return node
+
+    def parse_term(self, owner, missing_message):
+        node = self.parse_value(owner, missing_message)
+
+        while True:
+            kind = self.peek_kind()
+
+            if kind in VALUE_KINDS:
+                right = self.parse_value(owner, missing_message)
+                node = Multiply(node, right, right.line)
+
+            elif kind == DIVIDE:
+                operator = self.advance()
+                right = self.parse_value(operator, "계산할 값이 없음")
+                node = Divide(node, right, operator.line)
+ 
+            elif kind == MODULO:
+                operator = self.advance()
+                right = self.parse_value(operator, "계산할 값이 없음")
+                node = Modulo(node, right, operator.line)
+
+            else:
+                return node
+
+    def parse_value(self, owner, missing_message):
+        token = self.peek()
+
+        if token is not None and token.kind == NUMBER:
+            self.advance()
+            return Number(token.value, token.line)
+ 
+        if token is not None and token.kind == VARIABLE:
+            self.advance()
+            return Variable(token.value, token.line)
+ 
+        raise UsagiError(missing_message, owner.line)
