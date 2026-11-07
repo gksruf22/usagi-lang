@@ -6,11 +6,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
 
-def usagi(*args):
+def usagi(*args, input_text=None):
     """python -m usagi <args>"""
     return subprocess.run(
         [sys.executable, "-m", "usagi", *args],
         cwd=REPO_ROOT,
+        input=input_text,
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -67,3 +68,9 @@ def test_에러전_출력결과(tmp_path):
     assert result.stdout == "1\n"
     assert result.stderr == "하아?\n"
     assert result.returncode == 1
+
+def test_정수_입력(tmp_path):
+    path = write_source(tmp_path, "미야아아\n쥬르리 푸루\n쥬르리 푸루루\n야하 푸루 이야 푸루루\n야하핫\n")
+    result = usagi(path, input_text="3\n4\n")
+    assert result.stdout == "7\n"
+    assert result.returncode == 0
