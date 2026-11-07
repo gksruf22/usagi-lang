@@ -6,13 +6,19 @@ import pytest
 
 from usagi.errors import UsagiError
 from usagi.keywords import (
+    ADD,
+    ASSIGN,
     BLOCK_END,
+    DIVIDE,
+    INPUT_INT,
     MAIN,
+    MODULO,
     NEWLINE,
     NUMBER,
     PRINT,
     PRINT_CHAR,
     PRINT_NO_NEWLINE,
+    VARIABLE,
 )
 from usagi.lexer import normalize, read_source, tokenize
 
@@ -110,3 +116,73 @@ def test_BOM_파일(tmp_path):
 def test_없는_파일():
     with pytest.raises(UsagiError):
         read_source("없는파일.usagi")
+
+
+# 2단계
+
+def test_2단계_키워드():
+    tokens = tokenize("흐응 쥬르리 이야 핫")
+    assert kinds(tokens) == [ASSIGN, INPUT_INT, ADD, MODULO, NEWLINE]
+
+@pytest.mark.parametrize(
+    "word, expected",
+    [
+        ("푸루", 1),
+        ("푸루루", 2),
+        ("푸루루루루루", 5),
+    ],
+)
+def test_변수(word, expected):
+    token = tokenize(word)[0]
+    assert token.kind == VARIABLE
+    assert token.value == expected
+
+def test_대입문():
+    tokens = tokenize("푸루 흐응 우라라 이야 우라")
+    assert kinds(tokens) == [VARIABLE, ASSIGN, NUMBER, ADD, NUMBER, NEWLINE]
+
+def test_붙여쓰면_나누기():
+    tokens = tokenize("우라라라우라라")
+    assert kinds(tokens) == [NUMBER, DIVIDE, NUMBER, NEWLINE]
+    assert [t.value for t in tokens[:3]] == [3, None, 2]
+
+def test_변수_붙여쓰기():
+    tokens = tokenize("푸루루푸루 우라라라라우라")
+    assert kinds(tokens) == [VARIABLE, DIVIDE, VARIABLE, NUMBER, DIVIDE, NUMBER, NEWLINE]
+    assert [t.value for t in tokens[:3]] == [2, None, 1]
+
+def test_세조각이상():
+    tokens = tokenize("우라라라라우라라우라")
+    assert kinds(tokens) == [NUMBER, DIVIDE, NUMBER, DIVIDE, NUMBER, NEWLINE]
+
+def test_음수_0_붙여쓰기():
+    tokens = tokenize("우루루루우우라라")
+    assert [t.value for t in tokens if t.kind != NEWLINE] == [-3, None, 0, None, 2]
+ 
+ 
+def test_공백_곱하기_붙여쓰면_나누기():
+    assert kinds(tokenize("우라라라 우라라")) == [NUMBER, NUMBER, NEWLINE]
+    assert kinds(tokenize("우라라라우라라")) == [NUMBER, DIVIDE, NUMBER, NEWLINE]
+ 
+ 
+def test_키워드_잘림_검사():
+    # 푸루야우라우라는 '우'를 포함하지만 키워드라서 붙여 쓴 단어로 자르지 않는다
+    assert tokenize("미야아아\n푸루야우라우라 주석\n야하핫")[2].kind != DIVIDE
+
+@pytest.mark.parametrize(
+    "word",
+    [
+        "푸", # 루가 없는 변수
+        "푸라", # 변수에 라
+        "우라핫우라", # 핫을 붙여 씀
+        "우라이야우라", # 이야를 붙여 씀
+        "우라푸", # 마지막 조각이 푸
+        "야하우라", # 키워드에 숫자를 붙임
+    ],
+)
+def test_2단계_알수없는단어(word):
+    with pytest.raises(UsagiError) as info:
+        tokenize(f"미야아아\n야하 {word}")
+    assert info.value.line == 2
+    assert word in info.value.message
+ 
