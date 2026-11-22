@@ -9,16 +9,25 @@ from usagi.keywords import (
     ADD,
     ASSIGN,
     BLOCK_END,
+    BREAK,
+    CONTINUE,
     DIVIDE,
+    ELSE,
+    EQUAL,
+    GREATER,
+    IF,
     INPUT_INT,
+    LESS,
     MAIN,
     MODULO,
     NEWLINE,
+    NOT,
     NUMBER,
     PRINT,
     PRINT_CHAR,
     PRINT_NO_NEWLINE,
     VARIABLE,
+    WHILE,
 )
 from usagi.lexer import normalize, read_source, tokenize
 
@@ -185,4 +194,90 @@ def test_2단계_알수없는단어(word):
         tokenize(f"미야아아\n야하 {word}")
     assert info.value.line == 2
     assert word in info.value.message
- 
+
+
+# 3단계
+
+@pytest.mark.parametrize(
+    "word, kind",
+    [
+        ("우나", EQUAL),
+        ("우-라-", GREATER),
+        ("-라-우", LESS),
+        ("우-이-", NOT),
+        ("하?", IF),
+        ("하아?", ELSE),
+        ("푸루야", WHILE),
+        ("하아아앗!", BREAK),
+        ("으핫!", CONTINUE),
+    ],
+)
+def test_3단계_키워드(word, kind):
+    assert kinds(tokenize(word)) == [kind, NEWLINE]
+
+
+@pytest.mark.parametrize(
+    "word, kind",
+    [
+        ("우ー라ー", GREATER),    # 일본어 장음 부호
+        ("－라－우", LESS),       # 전각 하이픈
+        ("우ー이ー", NOT),
+        ("하？", IF),             # 전각 물음표
+        ("하아？", ELSE),
+        ("하아아앗！", BREAK),    # 전각 느낌표
+        ("으핫！", CONTINUE),
+    ],
+)
+def test_3단계_키워드_비슷한_기호(word, kind):
+    assert kinds(tokenize(word)) == [kind, NEWLINE]
+
+
+def test_전각_느낌표_정규화():
+    assert normalize("하아아앗！") == "하아아앗!"
+
+
+def test_우_푸로_시작하는_키워드_정수_변수가_아님():
+    # 우나, 우-라-, 우-이-는 '우'로, 푸루야는 '푸'로 시작하지만
+    # 키워드 표를 먼저 확인하므로 정수·변수나 붙여 쓴 단어(나누기)로 읽지 않는다
+    tokens = tokenize("푸루야 우-이- 푸루 우나 우 우-라- 우라")
+    assert kinds(tokens) == [WHILE, NOT, VARIABLE, EQUAL, NUMBER, GREATER, NUMBER, NEWLINE]
+
+
+def test_조건문_토큰():
+    source = "미야아아\n하? 푸루 -라-우 우\n하아?\n야하핫\n야하핫"
+    assert kinds(tokenize(source)) == [
+        MAIN, NEWLINE,
+        IF, VARIABLE, LESS, NUMBER, NEWLINE,
+        ELSE, NEWLINE,
+        BLOCK_END, NEWLINE,
+        BLOCK_END, NEWLINE,
+    ]
+
+
+def test_반복문_토큰():
+    source = "푸루야 우라\n하아아앗!\n으핫!\n야하핫"
+    assert kinds(tokenize(source)) == [
+        WHILE, NUMBER, NEWLINE,
+        BREAK, NEWLINE,
+        CONTINUE, NEWLINE,
+        BLOCK_END, NEWLINE,
+    ]
+
+
+@pytest.mark.parametrize(
+    "word",
+    [
+        "우라우나우라",   # 우나를 붙여 씀
+        "우-라-우라",     # 우-라-에 숫자를 붙여 씀
+        "-라-우우라",     # -라-우에 숫자를 붙여 씀
+        "푸루야우라",     # 푸루야에 숫자를 붙여 씀
+        "하",             # ?가 빠짐
+        "하아앗!",        # 아가 하나 모자람
+        "으핫",           # !가 빠짐
+    ],
+)
+def test_3단계_알수없는단어(word):
+    with pytest.raises(UsagiError) as info:
+        tokenize(f"미야아아\n야하 {word}")
+    assert info.value.line == 2
+    assert word in info.value.message
