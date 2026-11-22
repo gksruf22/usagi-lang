@@ -19,12 +19,28 @@ ADD = "ADD" # 더하기
 MODULO = "MODULO" # 나머지
 DIVIDE = "DIVIDE" # 나누기(키워드가 아니라 lexer가 붙여 쓴 단어를 자른 자리에 넣음)
 
+# 3단계
+EQUAL = "EQUAL" # 같다
+GREATER = "GREATER" # 크다
+LESS = "LESS" # 작다
+NOT = "NOT" # 아니다
+IF = "IF" # 조건문 시작
+ELSE = "ELSE" # 아니면
+WHILE = "WHILE" # 반복문 시작
+BREAK = "BREAK" # 반복 탈출
+CONTINUE = "CONTINUE" # 다음 반복으로
+
 # 2. 키워드 철자
 
 MAIN_WORD = "미야아아"
 BLOCK_END_WORD = "야하핫"
 ASSIGN_WORD = "흐응"
 INPUT_INT_WORD = "쥬르리"
+IF_WORD = "하?"
+ELSE_WORD = "하아?"
+WHILE_WORD = "푸루야"
+BREAK_WORD = "하아아앗!"
+CONTINUE_WORD = "으핫!"
 
 # 3. 키워드 표
 
@@ -38,6 +54,15 @@ KEYWORDS = {
     INPUT_INT_WORD: INPUT_INT,
     "이야": ADD,
     "핫": MODULO,
+    "우나": EQUAL,
+    "우-라-": GREATER,
+    "-라-우": LESS,
+    "우-이-": NOT,
+    IF_WORD: IF,
+    ELSE_WORD: ELSE,
+    WHILE_WORD: WHILE,
+    BREAK_WORD: BREAK,
+    CONTINUE_WORD: CONTINUE,
 }
 
 # 4. 정수와 변수를 만드는 글자(lexer가 글자 수를 셀 때 쓴다)
