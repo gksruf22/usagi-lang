@@ -195,7 +195,6 @@ def test_2단계_알수없는단어(word):
     assert info.value.line == 2
     assert word in info.value.message
 
-
 # 3단계
 
 @pytest.mark.parametrize(
@@ -236,7 +235,7 @@ def test_전각_느낌표_정규화():
     assert normalize("하아아앗！") == "하아아앗!"
 
 
-def test_우_푸로_시작하는_키워드_정수_변수가_아님():
+def test_우_푸로_시작하는_키워드는_정수_변수가_아님():
     # 우나, 우-라-, 우-이-는 '우'로, 푸루야는 '푸'로 시작하지만
     # 키워드 표를 먼저 확인하므로 정수·변수나 붙여 쓴 단어(나누기)로 읽지 않는다
     tokens = tokenize("푸루야 우-이- 푸루 우나 우 우-라- 우라")
