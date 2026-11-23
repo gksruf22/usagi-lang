@@ -8,15 +8,23 @@ from usagi.errors import UsagiError
 from usagi.nodes import (
     Add,
     Assign,
+    Break,
+    Continue,
     Divide,
+    Equal,
+    Greater,
+    If,
     InputInt,
+    Less,
     Modulo,
     Multiply,
+    Not,
     Number,
     Print,
     PrintChar,
     PrintNoNewline,
     Variable,
+    While,
 )
 
 # 문자 출력 유니코드 범위
@@ -27,8 +35,22 @@ SURROGATE_END = 0xDFFF
 
 INTEGER_INPUT = re.compile(r"-?[0-9]+")
 
+class BreakLoop(Exception):
+    pass
+
+class ContinueLoop(Exception):
+    pass
+
 def run(program, out=None, inp=None):
     Interpreter(out, inp).run(program)
+
+def is_true(value):
+    # 0이 아니면 참, 0이면 거짓
+    return value != 0
+
+def to_int(condition):
+    # True/False를 1/0으로
+    return 1 if condition else 0
 
 def c_divide(left, right):
     # 나눗셈: 몫을 0 쪽으로 버린다. python의 //는 내림이기에 직접 계산
@@ -51,7 +73,10 @@ class Interpreter:
         self.run_function(program.main)
 
     def run_function(self, function):
-        for statement in function.body:
+        self.execute_block(function.body)
+
+    def execute_block(self, statements):
+        for statement in statements:
             self.execute(statement)
 
     # 문장
@@ -75,6 +100,26 @@ class Interpreter:
         elif isinstance(node, InputInt):
             value = self.read_int(node.line)
             self.env.set(node.index, value)
+
+        elif isinstance(node, If):
+            if is_true(self.evaluate(node.condition)):
+                self.execute_block(node.then_body)
+            else:
+                self.execute_block(node.else_body)
+        elif isinstance(node, While):
+            while is_true(self.evaluate(node.condition)):
+                try:
+                    self.execute_block(node.body)
+                except BreakLoop:
+                    break
+                except ContinueLoop:
+                    continue
+
+        elif isinstance(node, Break):
+            raise BreakLoop()
+
+        elif isinstance(node, Continue):
+            raise ContinueLoop()
 
         else:
             # 파서가 만들지 않는 노드가 들어온 경우 (인터프리터 버그)
@@ -109,6 +154,18 @@ class Interpreter:
             right = self.evaluate(node.right)
             self.check_not_zero(right, node.line)
             return c_modulo(left, right)
+
+        if isinstance(node, Equal):
+            return to_int(self.evaluate(node.left) == self.evaluate(node.right))
+
+        if isinstance(node, Greater):
+            return to_int(self.evaluate(node.left) > self.evaluate(node.right))
+
+        if isinstance(node, Less):
+            return to_int(self.evaluate(node.left) < self.evaluate(node.right))
+
+        if isinstance(node, Not):
+            return to_int(not is_true(self.evaluate(node.expr)))
 
         # 파서가 만들지 않는 노드가 들어온 경우 (인터프리터 버그)
         raise UsagiError(f"계산할 수 없는 식: {type(node).__name__}", node.line)
